@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Float, Integer, String, create_engine
+﻿from sqlalchemy import Column, Float, Integer, String, Text, UniqueConstraint, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./palmystery.db"
@@ -22,6 +22,17 @@ class User(Base):
     birth_place = Column(String, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+
+
+class DailyRashifal(Base):
+    __tablename__ = "daily_rashifal"
+    __table_args__ = (UniqueConstraint("date_ad", "rashi", name="uq_date_rashi"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    date_ad = Column(String, index=True, nullable=False)
+    rashi = Column(String, nullable=False)
+    text_ne = Column(Text, nullable=False)
+    text_en = Column(Text, nullable=False)
 
 
 def get_db():
