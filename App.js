@@ -1,10 +1,12 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import * as SecureStore from 'expo-secure-store';
 
 const API_URL = 'http://192.168.1.64:8000';
+const TOKEN_KEY = 'palmystery_token';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,8 +31,14 @@ function ReadingsScreen() {
   return <Placeholder title="Readings" />;
 }
 
-function ProfileScreen() {
-  return <Placeholder title="Profile" />;
+function ProfileScreen({ onLogout }) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Profile</Text>
+      <Button title="Log out" onPress={onLogout} />
+      <StatusBar style="auto" />
+    </View>
+  );
 }
 
 function LoginScreen({ onLogin }) {
@@ -88,9 +96,39 @@ function LoginScreen({ onLogin }) {
 
 export default function App() {
   const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadToken() {
+      const saved = await SecureStore.getItemAsync(TOKEN_KEY);
+      if (saved) {
+        setToken(saved);
+      }
+      setLoading(false);
+    }
+    loadToken();
+  }, []);
+
+  async function handleLogin(newToken) {
+    await SecureStore.setItemAsync(TOKEN_KEY, newToken);
+    setToken(newToken);
+  }
+
+  async function handleLogout() {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    setToken(null);
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   if (!token) {
-    return <LoginScreen onLogin={setToken} />;
+    return <LoginScreen onLogin={handleLogin} />;
   }
 
   return (
@@ -99,7 +137,9 @@ export default function App() {
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Scan" component={ScanScreen} />
         <Tab.Screen name="Readings" component={ReadingsScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
+        <Tab.Screen name="Profile">
+          {() => <ProfileScreen onLogout={handleLogout} />}
+        </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );
