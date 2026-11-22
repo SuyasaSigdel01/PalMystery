@@ -1,11 +1,11 @@
-﻿
-import json
+﻿import json
 import os
 
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from db import DailyRashifal
 from jyotish import RASHIS_EN
 
 load_dotenv()
@@ -45,3 +45,26 @@ def generate_daily(date_str):
     )
 
     return json.loads(response.text)
+
+
+def get_for_date(db, date_str):
+    rows = db.query(DailyRashifal).filter(DailyRashifal.date_ad == date_str).all()
+    if rows:
+        return rows
+
+    data = generate_daily(date_str)
+
+    rows = [
+        DailyRashifal(
+            date_ad=date_str,
+            rashi=item["rashi"],
+            text_ne=item["ne"],
+            text_en=item["en"],
+        )
+        for item in data["readings"]
+    ]
+
+    db.add_all(rows)
+    db.commit()
+
+    return rows
