@@ -1,6 +1,14 @@
 ﻿import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Button,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import * as SecureStore from 'expo-secure-store';
@@ -20,7 +28,58 @@ function Placeholder({ title }) {
 }
 
 function HomeScreen() {
-  return <Placeholder title="Home" />;
+  const [data, setData] = useState(null);
+  const [lang, setLang] = useState('ne');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(API_URL + '/rashifal');
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        setError('Cannot reach server');
+      }
+    }
+    load();
+  }, []);
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!data) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.date}>{data.date}</Text>
+      <View style={styles.row}>
+        <Button title="Nepali" onPress={() => setLang('ne')} />
+        <Button title="English" onPress={() => setLang('en')} />
+      </View>
+      <FlatList
+        data={data.readings}
+        keyExtractor={(item) => item.rashi}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{item.rashi}</Text>
+            <Text style={styles.cardBody}>{lang === 'ne' ? item.ne : item.en}</Text>
+          </View>
+        )}
+      />
+    </View>
+  );
 }
 
 function ScanScreen() {
@@ -153,9 +212,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  screen: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 48,
+    paddingHorizontal: 16,
+  },
   title: {
     fontSize: 24,
     marginBottom: 24,
+  },
+  date: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 12,
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  cardBody: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   input: {
     width: '100%',
