@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
@@ -7,10 +7,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from db import Base, User, engine, get_db
+from rashifal import get_for_date
 
 SECRET_KEY = "dev-secret-change-me"
 ALGORITHM = "HS256"
 TOKEN_HOURS = 24
+NEPAL_TZ = timezone(timedelta(hours=5, minutes=45))
 
 Base.metadata.create_all(bind=engine)
 
@@ -38,6 +40,10 @@ def make_token(user_id: int) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def nepal_today() -> str:
+    return datetime.now(NEPAL_TZ).strftime("%Y-%m-%d")
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -63,3 +69,16 @@ def login(creds: Credentials, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Wrong email or password")
 
     return {"token": make_token(user.id)}
+
+
+@app.get("/rashifal")
+def rashifal(date: str = None, db: Session = Depends(get_db)):
+    day = date or nepal_today()
+    rows = get_for_date(db, day)
+
+    return {
+        "date": day,
+        "readings": [
+            {"rashi": r.rashi, "ne": r.text_ne, "en": r.text_en} for r in rows
+        ],
+    }
